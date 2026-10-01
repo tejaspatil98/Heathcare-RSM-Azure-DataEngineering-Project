@@ -109,34 +109,53 @@ The pipeline ingests heterogeneous sources using **Azure Data Factory**, stores 
 Data in the Gold Layer is modeled into a high-level **Star Schema** optimized for analytical queries:
 
 ```
-                       +----------------------+
-                       |     dim_patient      |
-                       +----------------------+
-                                  │
-                                  │ 1
-                                  │
-                                  │ N
-+----------------------+  +-------┴--------------+  +----------------------+
-|     dim_provider     |  |     fact_billing     |  |    dim_department    |
-+----------------------+  +----------------------+  +----------------------+
-| PK provider_key      |──| PK billing_key       |──| PK department_key    |
-+----------------------+  | FK patient_key       |  +----------------------+
-                          | FK provider_key      |
-                          | FK department_key    |
-                          | FK claim_key         |
-                          |    gross_charges     |
-                          |    payor_payments    |
-                          |    patient_payments  |
-                          |    outstanding_bal   |
-                          +----------┬-----------+
-                                     │ N
+                        ---------------------------+
+                       |      dim_patient          |
+                       +---------------------------+
+                       | PK  patient_key (SK)      |
+                       |     patient_id            |
+                       |     first_name            |
+                       |     last_name             |
+                       |     gender                |
+                       |     dob                   |
+                       |     address               |
+                       |     is_current            |
+                       +-------------+-------------+
                                      │
                                      │ 1
-                          +----------┴-----------+
-                          |      dim_claims      |
-                          +----------------------+
-                          | PK claim_key         |
-                          +----------------------+
+                                     │
+                                     │ N
++---------------------------+  +-----+---------------------+  +---------------------------+
+|      dim_provider         |  |      fact_billing         |  |       dim_department      |
++---------------------------+  +---------------------------+  +---------------------------+
+| PK  provider_key (SK)     |  | PK  billing_key (SK)      |  | PK  department_key (SK)   |
+|     provider_id           |  | FK  patient_key           |  |     department_id         |
+|     npi_code              |  | FK  provider_key          |  |     department_name       |
+|     first_name            |  | FK  department_key        |  |     facility_name         |
+|     last_name             |  | FK  claim_key             |  +-------------+-------------+
+|     specialty             |  | FK  icd_key               |                │
++-------------+-------------+  | FK  cpt_key               |                │ 1
+              │                |     encounter_id          |                │
+              │ 1              |     transaction_date      |                │ N
+              │                |     gross_charge_amount   |  +-------------+-------------+
+              │ N              |     insurance_paid_amount |  |      fact_encounters      |
+              +───────────────►|     patient_paid_amount   |  +---------------------------+
+                               |     outstanding_balance   |  | PK  encounter_fact_key    |
+                               |     days_in_ar            |  | FK  patient_key           |
+                               +--------------+------------+  | FK  provider_key          |
+                                              │               | FK  department_key        |
+                                              │ N             |     admission_date        |
+                                              │               |     discharge_date        |
+                                              │ 1             |     encounter_type        |
+                               +--------------+------------+  +---------------------------+
+                               |        dim_claims         |
+                               +---------------------------+
+                               | PK  claim_key (SK)        |
+                               |     claim_id              |
+                               |     claim_status          |
+                               |     payor_id              |
+                               |     submitted_amount      |
+                               +---------------------------+
 
 ```
 
